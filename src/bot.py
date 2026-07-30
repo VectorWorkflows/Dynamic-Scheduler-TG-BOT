@@ -1,22 +1,36 @@
+# ==========================================
+# IMPORTS: Bringing in the necessary tools
+# ==========================================
 import time
 import datetime
-import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-import config
+import telebot # The main Telegram bot library
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton # Used to build the clickable buttons
+import config # Brings in your .env variables (Tokens, URLs)
 from src.database import get_user_token, get_user_profile, update_user_profile, reset_user_profile, delete_user_data
 from src.calendar_service import execute_schedule_creation, clear_day_events, add_custom_task, tz
 
+# Initialize the bot using the token from your .env file
 bot = telebot.TeleBot(config.TELEGRAM_BOT_TOKEN)
+
+# A temporary memory dictionary to hold user data between conversation steps (like dates, names, etc.)
 user_states = {}
 
+# ==========================================
+# AUTHENTICATION CHECKER
+# ==========================================
 def is_authenticated(chat_id: str) -> bool: 
+    """Checks if the user has a Google token saved in MongoDB."""
     return get_user_token(chat_id) is not None
 
+# ==========================================
+# MAIN MENU HANDLER (/start or /menu)
+# ==========================================
 @bot.message_handler(commands=['start', 'menu'])
 def send_menu(message):
+    """Fired whenever a user types /start or /menu."""
     chat_id = str(message.chat.id)
     
-    # STRICT AUTH GATE: Unauthenticated users get ONLY the login link, no menus/buttons
+    # STRICT AUTH GATE: If they aren't logged in, stop here and ONLY show the login link.
     if not is_authenticated(chat_id):
         auth_url = f"{config.BASE_URL}/login?chat_id={chat_id}"
         bot.send_message(
@@ -25,19 +39,29 @@ def send_menu(message):
         )
         return
 
+    # If they are logged in, build the Main Menu buttons
     markup = InlineKeyboardMarkup()
+    # row() puts buttons side-by-side. You can add as many as fit on the screen.
     markup.row(InlineKeyboardButton("🌅 Awake Now", callback_data="awake_now"), InlineKeyboardButton("🗓️ Plan", callback_data="plan_menu"))
     markup.row(InlineKeyboardButton("➕ Add Task", callback_data="add_task_menu"), InlineKeyboardButton("🧹 Clear Day", callback_data="clear_menu"))
     markup.row(InlineKeyboardButton("⚙️ Settings / Configure", callback_data="settings_menu"))
+    
+    # Send the menu to the user
     bot.send_message(chat_id, "🤖 **Main Menu**\nChoose an action:", reply_markup=markup, parse_mode="Markdown")
 
+# ==========================================
+# BUTTON CLICK HANDLER (Catches EVERY button tap)
+# ==========================================
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
+    """Fired whenever ANY inline button is clicked."""
     chat_id = str(call.message.chat.id)
+    
+    # This stops the little loading clock animation on the Telegram button
     try: bot.answer_callback_query(call.id)
     except Exception: pass
 
-    # STRICT AUTH GATE FOR ALL BUTTON CLICKS
+    # STRICT AUTH GATE FOR BUTTONS: If their token was deleted, stop them from using buttons.
     if not is_authenticated(chat_id):
         auth_url = f"{config.BASE_URL}/login?chat_id={chat_id}"
         bot.send_message(
@@ -46,21 +70,60 @@ def handle_callbacks(call):
         )
         return
 
-    # --- MAIN ACTIONS ---
+    # --------------------------------------------------
+    # 1. AWAKE NOW BUTTON
+    # --------------------------------------------------
     if call.data == "awake_now":
+        profile = get_user_profile(chat_id)
+        
+        # --- NEW CHANGE: Check if 24-Hour Mode is active ---
+        if profile.get('mode_24h', False):
+            # If 24H mode is ON, ask them which routine they want to run
+            markup = InlineKeyboardMarkup()
+            markup.row(InlineKeyboardButton("🌅 Early", callback_data="manual_awake_early"))
+            markup.row(InlineKeyboardButton("☀️ Normal", callback_data="manual_awake_normal"))
+            markup.row(InlineKeyboardButton("🌙 Late", callback_data="manual_awake_late"))
+            bot.send_message(chat_id, "🌐 **24-Hour Mode Active**\nSince you wake up at any time, which routine do you want to run right now?", reply_markup=markup, parse_mode="Markdown")
+        else:
+            # If 24H mode is OFF, just run it automatically using the current time
+            now = datetime.datetime.now(tz).replace(tzinfo=None)
+            bot.send_message(chat_id, f"Processing current time: {now.strftime('%I:%M %p')}...")
+            execute_schedule_creation(chat_id, now, bot)
+
+    # --------------------------------------------------
+    # 1.5. MANUAL AWAKE SELECTION (For 24-Hour Mode)
+    # --------------------------------------------------
+    elif call.data.startswith("manual_awake_"):
+        # This extracts the word 'early', 'normal', or 'late' from the button's callback_data
+        selected_slot = call.data.split("_")[2] 
         now = datetime.datetime.now(tz).replace(tzinfo=None)
+        
+        # We save their manual choice temporarily to the database.
+        # (We will update calendar_service.py next to read this override and paste the right schedule!)
+        profile = get_user_profile(chat_id)
+        profile['temp_manual_override'] = selected_slot
+        update_user_profile(chat_id, profile)
+        
+        bot.send_message(chat_id, f"Processing manual **{selected_slot.upper()}** routine for {now.strftime('%I:%M %p')}...", parse_mode="Markdown")
         execute_schedule_creation(chat_id, now, bot)
 
-    # --- PLAN MENU ---
+    # --------------------------------------------------
+    # 2. PLAN MENU
+    # --------------------------------------------------
     elif call.data == "plan_menu":
         markup = InlineKeyboardMarkup()
         markup.row(InlineKeyboardButton("Today", callback_data="plan_today"), InlineKeyboardButton("Tomorrow", callback_data="plan_tomorrow"), InlineKeyboardButton("Custom Date", callback_data="plan_custom"))
         bot.send_message(chat_id, "Which day are you planning for?", reply_markup=markup)
 
     elif call.data in ["plan_today", "plan_tomorrow"]:
+        # Figure out if they meant today or tomorrow based on timezone
         target_date = datetime.datetime.now(tz).date() if call.data == "plan_today" else datetime.datetime.now(tz).date() + datetime.timedelta(days=1)
+        
+        # Save the date into temporary memory so the next step handler remembers it
         user_states[chat_id] = {'date': target_date}
         msg = bot.send_message(chat_id, f"Planning for **{target_date.strftime('%b %d')}**.\nWhat time will you wake up? *(HH:MM 24-hr, e.g. 06:30)*", parse_mode="Markdown")
+        
+        # This tells Telegram: "The very next text message this user sends should go to the 'process_plan_time' function"
         bot.register_next_step_handler(msg, process_plan_time)
 
     elif call.data == "plan_custom":
@@ -68,7 +131,9 @@ def handle_callbacks(call):
         msg = bot.send_message(chat_id, "Reply with date in `DD-MM-YYYY` format (e.g. 25-07-2026):", parse_mode="Markdown")
         bot.register_next_step_handler(msg, process_custom_date)
 
-    # --- CLEAR MENU ---
+    # --------------------------------------------------
+    # 3. CLEAR DAY MENU
+    # --------------------------------------------------
     elif call.data == "clear_menu":
         markup = InlineKeyboardMarkup()
         markup.row(InlineKeyboardButton("Today", callback_data="clear_today"), InlineKeyboardButton("Tomorrow", callback_data="clear_tomorrow"), InlineKeyboardButton("Custom Date", callback_data="clear_custom"))
@@ -77,14 +142,16 @@ def handle_callbacks(call):
     elif call.data in ["clear_today", "clear_tomorrow"]:
         target_date = datetime.datetime.now(tz).date() if call.data == "clear_today" else datetime.datetime.now(tz).date() + datetime.timedelta(days=1)
         bot.send_message(chat_id, f"🧹 Sweeping all events for {target_date.strftime('%b %d')}...")
-        clear_day_events(chat_id, target_date, bot)
+        clear_day_events(chat_id, target_date, bot) # Calls the wipe function
 
     elif call.data == "clear_custom":
         user_states[chat_id] = {'action': 'clear'}
         msg = bot.send_message(chat_id, "Reply with date in `DD-MM-YYYY` format:", parse_mode="Markdown")
         bot.register_next_step_handler(msg, process_custom_date)
 
-    # --- ADD TASK MENU ---
+    # --------------------------------------------------
+    # 4. ADD TASK MENU
+    # --------------------------------------------------
     elif call.data == "add_task_menu":
         markup = InlineKeyboardMarkup()
         markup.row(InlineKeyboardButton("Today", callback_data="add_today"), InlineKeyboardButton("Tomorrow", callback_data="add_tomorrow"), InlineKeyboardButton("Custom Date", callback_data="add_custom"))
@@ -101,7 +168,9 @@ def handle_callbacks(call):
         msg = bot.send_message(chat_id, "Reply with date in `DD-MM-YYYY` format:", parse_mode="Markdown")
         bot.register_next_step_handler(msg, process_custom_date)
 
-    # --- SETTINGS MENU ---
+    # --------------------------------------------------
+    # 5. SETTINGS / CONFIGURATION MENU
+    # --------------------------------------------------
     elif call.data == "settings_menu":
         profile = get_user_profile(chat_id)
         mode_str = "ON (24-Hour Active)" if profile.get('mode_24h') else "OFF (Standard Windows Active)"
@@ -116,6 +185,7 @@ def handle_callbacks(call):
 
     elif call.data == "toggle_24h":
         profile = get_user_profile(chat_id)
+        # Flip the boolean value: if True make False, if False make True
         profile['mode_24h'] = not profile.get('mode_24h', False)
         update_user_profile(chat_id, profile)
         bot.send_message(chat_id, f"🌐 **24-Hour Mode** is now **{'ENABLED' if profile['mode_24h'] else 'DISABLED'}**.")
@@ -130,11 +200,14 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "Which template date do you want to change?", reply_markup=markup)
 
     elif call.data.startswith("edit_tpl_"):
-        slot = call.data.split("_")[2]
+        slot = call.data.split("_")[2] # extracts 'early', 'normal', or 'late'
         user_states[chat_id] = {'editing_slot': slot}
         msg = bot.send_message(chat_id, f"Editing **{slot.upper()}** template.\nReply with date in `DD-MM-YYYY` format:", parse_mode="Markdown")
         bot.register_next_step_handler(msg, process_template_date)
 
+    # --------------------------------------------------
+    # 6. RESET & LOGOUT SUB-MENU
+    # --------------------------------------------------
     elif call.data == "reset_menu":
         markup = InlineKeyboardMarkup()
         markup.row(InlineKeyboardButton("Reset Windows Only", callback_data="reset_win"))
@@ -159,45 +232,64 @@ def handle_callbacks(call):
             parse_mode="Markdown"
         )
 
-# === STEP HANDLERS ===
+
+# ==========================================
+# STEP HANDLERS (Functions that run after a user replies to a prompt)
+# ==========================================
+
 def process_custom_date(message):
+    """Parses a manually typed date (DD-MM-YYYY) and routes to the correct action."""
     chat_id = str(message.chat.id)
     try:
+        # Attempt to convert the text into a real date object
         target_date = datetime.datetime.strptime(message.text.strip(), "%d-%m-%Y").date()
+        
+        # Check temporary memory to see WHY we asked for a date (plan, clear, or add)
         action = user_states.get(chat_id, {}).get('action')
         
         if action == "plan":
             user_states[chat_id] = {'date': target_date}
             msg = bot.send_message(chat_id, f"Planning for **{target_date.strftime('%b %d')}**.\nWake time? (HH:MM):", parse_mode="Markdown")
             bot.register_next_step_handler(msg, process_plan_time)
+            
         elif action == "clear":
             bot.send_message(chat_id, f"🧹 Sweeping all events for {target_date.strftime('%b %d')}...")
             clear_day_events(chat_id, target_date, bot)
             if chat_id in user_states: del user_states[chat_id]
+            
         elif action == "add":
             user_states[chat_id] = {'date': target_date}
             msg = bot.send_message(chat_id, f"Adding task for **{target_date.strftime('%b %d')}**.\nTask name?:", parse_mode="Markdown")
             bot.register_next_step_handler(msg, process_add_task_name)
+            
     except ValueError:
-        bot.send_message(chat_id, "❌ Invalid date format. Use DD-MM-YYYY.")
+        bot.send_message(chat_id, "❌ Invalid date format. Please restart from menu and use DD-MM-YYYY.")
 
 def process_plan_time(message):
+    """Catches the wake-up time for a custom planned day."""
     chat_id = str(message.chat.id)
     try:
         target_time = datetime.datetime.strptime(message.text.strip(), "%H:%M").time()
+        # Combine the saved date and the newly provided time into one datetime object
         target_datetime = datetime.datetime.combine(user_states[chat_id]['date'], target_time)
+        
         bot.send_message(chat_id, f"Preparing schedule for {target_datetime.strftime('%b %d at %I:%M %p')}...")
         execute_schedule_creation(chat_id, target_datetime, bot)
+        
+        # Clean up temporary memory
         if chat_id in user_states: del user_states[chat_id]
-    except Exception: bot.send_message(chat_id, "❌ Invalid time format. Use HH:MM.")
+    except Exception: 
+        bot.send_message(chat_id, "❌ Invalid time format. Use HH:MM.")
 
 def process_add_task_name(message):
+    """Saves the name of a custom task and asks for the start time."""
     chat_id = str(message.chat.id)
     user_states[chat_id]['name'] = message.text
     msg = bot.send_message(chat_id, "Start time? *(HH:MM 24-hr, e.g. 14:30)*", parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_add_task_time)
 
 def process_add_task_time(message):
+    """Saves the start time of a custom task and asks for the duration."""
     chat_id = str(message.chat.id)
     try:
         chosen_time = datetime.datetime.strptime(message.text.strip(), "%H:%M").time()
@@ -208,16 +300,21 @@ def process_add_task_time(message):
         bot.send_message(chat_id, "❌ Invalid time format.")
 
 def process_add_task_duration(message):
+    """Final step to add a custom task. Calls Google Calendar API."""
     chat_id = str(message.chat.id)
     try:
+        # Convert text to a float (e.g. "1.5")
         duration_hours = float(message.text.strip())
         data = user_states[chat_id]
         add_custom_task(chat_id, data['date'], data['name'], data['start_time'], duration_hours, bot)
     except ValueError:
         bot.send_message(chat_id, "❌ Invalid duration.")
     finally:
+        # Always clean up memory
         if chat_id in user_states: del user_states[chat_id]
 
+# --- WAKE WINDOW SETUP SEQUENCE ---
+# This is a chain of 4 step handlers that run one after the other.
 def process_window_early(message):
     chat_id = str(message.chat.id)
     try:
@@ -247,6 +344,8 @@ def process_window_end(message):
     try:
         latest = datetime.datetime.strptime(message.text.strip(), "%H:%M").strftime("%H:%M")
         profile = get_user_profile(chat_id)
+        
+        # Save all 4 times into the database
         profile['wake_windows'] = {
             "earliest_start": user_states[chat_id]['earliest_start'],
             "normal_start": user_states[chat_id]['normal_start'],
@@ -254,6 +353,7 @@ def process_window_end(message):
             "latest_end": latest
         }
         update_user_profile(chat_id, profile)
+        
         bot.send_message(
             chat_id, 
             f"✅ **Wake Windows Configured!**\n\n"
@@ -265,6 +365,7 @@ def process_window_end(message):
     except Exception: bot.send_message(chat_id, "❌ Invalid time format.")
 
 def process_template_date(message):
+    """Updates the custom template date (where the bot copies tasks from) for a specific slot."""
     chat_id = str(message.chat.id)
     try:
         new_date = datetime.datetime.strptime(message.text.strip(), "%d-%m-%Y").strftime("%d-%m-%Y")
@@ -279,8 +380,17 @@ def process_template_date(message):
     except ValueError:
         bot.send_message(chat_id, "❌ Invalid date format. Use DD-MM-YYYY.")
 
+
+# ==========================================
+# BOT LAUNCHER
+# ==========================================
 def start_bot():
+    """This function keeps the bot running 24/7 on the server."""
     print("🚀 Vector Workflows UI started.")
     while True:
-        try: bot.polling(none_stop=True)
-        except Exception as e: time.sleep(5)
+        try: 
+            # polling(none_stop=True) means the bot is actively listening to Telegram's servers
+            bot.polling(none_stop=True)
+        except Exception as e: 
+            # If the network drops, wait 5 seconds and try again instead of crashing
+            time.sleep(5)
