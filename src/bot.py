@@ -7,7 +7,7 @@ import telebot # The main Telegram bot library
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton # Used to build the clickable buttons
 import config # Brings in your .env variables (Tokens, URLs)
 from src.database import get_user_token, get_user_profile, update_user_profile, reset_user_profile, delete_user_data
-from src.calendar_service import execute_schedule_creation, clear_day_events, add_custom_task, tz
+from src.calendar_service import execute_schedule_creation, clear_day_events, add_custom_task, fetch_and_save_custom_template, tz
 
 # Initialize the bot using the token from your .env file
 bot = telebot.TeleBot(config.TELEGRAM_BOT_TOKEN)
@@ -178,7 +178,7 @@ def handle_callbacks(call):
         markup = InlineKeyboardMarkup()
         markup.row(InlineKeyboardButton("⏰ Configure Wake Windows", callback_data="set_windows"))
         markup.row(InlineKeyboardButton(f"🌐 24H Mode: {mode_str}", callback_data="toggle_24h"))
-        markup.row(InlineKeyboardButton("📅 Custom Template Dates", callback_data="set_templates"))
+        markup.row(InlineKeyboardButton("📅 Capture Custom Template", callback_data="set_templates"))
         markup.row(InlineKeyboardButton("🗑️ Reset Settings & Logout", callback_data="reset_menu"))
         
         bot.send_message(chat_id, "⚙️ **Settings / Configure**\nCustomize your preferences below:", reply_markup=markup, parse_mode="Markdown")
@@ -197,12 +197,12 @@ def handle_callbacks(call):
     elif call.data == "set_templates":
         markup = InlineKeyboardMarkup()
         markup.row(InlineKeyboardButton("Early", callback_data="edit_tpl_early"), InlineKeyboardButton("Normal", callback_data="edit_tpl_normal"), InlineKeyboardButton("Late", callback_data="edit_tpl_late"))
-        bot.send_message(chat_id, "Which template date do you want to change?", reply_markup=markup)
+        bot.send_message(chat_id, "Which template slot do you want to capture and override?", reply_markup=markup)
 
     elif call.data.startswith("edit_tpl_"):
         slot = call.data.split("_")[2] # extracts 'early', 'normal', or 'late'
         user_states[chat_id] = {'editing_slot': slot}
-        msg = bot.send_message(chat_id, f"Editing **{slot.upper()}** template.\nReply with date in `DD-MM-YYYY` format:", parse_mode="Markdown")
+        msg = bot.send_message(chat_id, f"Capturing custom tasks for **{slot.upper()}**.\nReply with the Google Calendar date you built it on (`DD-MM-YYYY`):", parse_mode="Markdown")
         bot.register_next_step_handler(msg, process_template_date)
 
     # --------------------------------------------------
@@ -221,7 +221,7 @@ def handle_callbacks(call):
 
     elif call.data == "reset_full":
         reset_user_profile(chat_id, "full")
-        bot.send_message(chat_id, "🧹 Full profile wiped. Tap **Awake Now** to re-inject fresh 11-block templates into Google Calendar!")
+        bot.send_message(chat_id, "🧹 Full profile wiped. The bot will now use the factory default `templates.json` on your next run.")
 
     elif call.data == "delete_account":
         delete_user_data(chat_id)
@@ -364,21 +364,24 @@ def process_window_end(message):
         )
     except Exception: bot.send_message(chat_id, "❌ Invalid time format.")
 
+
+# --- CUSTOM TEMPLATE MEMORY CAPTURE ---
 def process_template_date(message):
-    """Updates the custom template date (where the bot copies tasks from) for a specific slot."""
+    """
+    Takes the provided date, triggers the smart 18-hour calendar scanner, 
+    and saves the raw JSON template into the user's MongoDB profile.
+    """
     chat_id = str(message.chat.id)
     try:
-        new_date = datetime.datetime.strptime(message.text.strip(), "%d-%m-%Y").strftime("%d-%m-%Y")
+        date_str = datetime.datetime.strptime(message.text.strip(), "%d-%m-%Y").strftime("%d-%m-%Y")
         slot = user_states[chat_id]['editing_slot']
         
-        profile = get_user_profile(chat_id)
-        profile['template_dates'][slot] = new_date
-        update_user_profile(chat_id, profile)
+        # Call the new 18-hour fetcher from calendar_service to lock the custom template into database memory
+        fetch_and_save_custom_template(chat_id, slot, date_str, bot)
         
-        bot.send_message(chat_id, f"✅ **{slot.capitalize()}** template source date set to `{new_date}`.", parse_mode="Markdown")
         del user_states[chat_id]
     except ValueError:
-        bot.send_message(chat_id, "❌ Invalid date format. Use DD-MM-YYYY.")
+        bot.send_message(chat_id, "❌ Invalid date format. Please restart from menu and use DD-MM-YYYY.")
 
 
 # ==========================================

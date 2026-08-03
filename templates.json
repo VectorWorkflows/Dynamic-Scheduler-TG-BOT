@@ -1,0 +1,221 @@
+{
+    "normal": [
+        {
+            "summary": "Morning Walk, Bath, Breakfast",
+            "description": "Light exercise, stretching, yoga. Skip mental exhaustion before main work.",
+            "start_time": "2026-05-31T07:00:00Z",
+            "end_time": "2026-05-31T09:00:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Practice / Work / Output",
+            "description": "Active work block. Try, practice, and create. USE POMODORO.",
+            "start_time": "2026-05-31T09:15:00Z",
+            "end_time": "2026-05-31T13:00:00Z",
+            "colorId": "3"
+        },
+        {
+            "summary": "Eat, Rest",
+            "description": "Lunch/brunch, relaxing, hydration.",
+            "start_time": "2026-05-31T13:00:00Z",
+            "end_time": "2026-05-31T13:45:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Workout with 90 min Timer",
+            "description": "Interval timer. Drop workout when time ends to stay efficient.",
+            "start_time": "2026-05-31T13:45:00Z",
+            "end_time": "2026-05-31T15:00:00Z",
+            "colorId": "8"
+        },
+        {
+            "summary": "Calm down",
+            "description": "Shower, recovery, mental calm.",
+            "start_time": "2026-05-31T15:00:00Z",
+            "end_time": "2026-05-31T15:30:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Learn, Study, Improve",
+            "description": "Deep educational block. Study planned materials.",
+            "start_time": "2026-05-31T15:30:00Z",
+            "end_time": "2026-05-31T19:00:00Z",
+            "colorId": "9"
+        },
+        {
+            "summary": "WHATEVER",
+            "description": "Unstructured time. Avoid vices.",
+            "start_time": "2026-05-31T19:00:00Z",
+            "end_time": "2026-05-31T20:15:00Z",
+            "colorId": "2"
+        },
+        {
+            "summary": "Dinner",
+            "description": "Dinner, cleaning up, relaxing.",
+            "start_time": "2026-05-31T20:15:00Z",
+            "end_time": "2026-05-31T21:00:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Journal, Trackers, Shopping",
+            "description": "Reflection, habit tracking, essentials for tomorrow.",
+            "start_time": "2026-05-31T21:00:00Z",
+            "end_time": "2026-05-31T22:00:00Z",
+            "colorId": "10"
+        },
+        {
+            "summary": "Wind down",
+            "description": "Second bath, meditate, prep bed.",
+            "start_time": "2026-05-31T22:00:00Z",
+            "end_time": "2026-05-31T22:45:00Z",
+            "colorId": "3"
+        }
+    ],
+    "early": [
+        
+        {
+            "summary": "Practice / Work / Output",
+            "description": "Active work block. Try, practice, and create. USE POMODORO.",
+            "start_time": "2026-06-01T07:00:00Z",
+            "end_time": "2026-06-01T10:45:00Z",
+            "colorId": "3"
+        },
+        {
+            "summary": "Morning Walk, Bath, Breakfast",
+            "description": "Light exercise, stretching, yoga. Skip mental exhaustion before main work.",
+            "start_time": "2026-06-01T10:45:00Z",
+            "end_time": "2026-06-01T12:45:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Learn, Study, Improve",
+            "description": "Deep educational block. Study planned materials.",
+            "start_time": "2026-06-01T12:45:00Z",
+            "end_time": "2026-06-01T16:15:00Z",
+            "colorId": "9"
+        },
+        {
+            "summary": "Eat, Rest",
+            "description": "Lunch/brunch, relaxing, hydration.",
+            "start_time": "2026-06-01T16:15:00Z",
+            "end_time": "2026-06-01T17:00:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Workout with 90 min Timer",
+            "description": "Interval timer. Drop workout when time ends to stay efficient.",
+            "start_time": "2026-06-01T17:15:00Z",
+            "end_time": "2026-06-01T18:30:00Z",
+            "colorId": "8"
+        },
+        {
+            "summary": "Calm down",
+            "description": "Shower, recovery, mental calm.",
+            "start_time": "2026-06-01T18:30:00Z",
+            "end_time": "2026-06-01T19:00:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Journal, Trackers, Shopping",
+            "description": "Reflection, habit tracking, essentials for tomorrow.",
+            "start_time": "2026-06-01T19:15:00Z",
+            "end_time": "2026-06-01T20:15:00Z",
+            "colorId": "10"
+        },
+        {
+            "summary": "WHATEVER",
+            "description": "Unstructured time. Avoid vices.",
+            "start_time": "2026-06-01T20:30:00Z",
+            "end_time": "2026-06-01T21:45:00Z",
+            "colorId": "2"
+        },
+        {
+            "summary": "Dinner",
+            "description": "Dinner, cleaning up, relaxing.",
+            "start_time": "2026-06-01T22:00:00Z",
+            "end_time": "2026-06-01T22:45:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Wind down",
+            "description": "Second bath, meditate, prep bed.",
+            "start_time": "2026-06-01T23:00:00Z",
+            "end_time": "2026-06-01T23:45:00Z",
+            "colorId": "3"
+        }
+    ],
+    "late": [
+        
+        {
+            "summary": "Morning Walk, Bath, Breakfast",
+            "description": "Light exercise, stretching, yoga. Skip mental exhaustion before main work.",
+            "start_time": "2026-06-02T07:00:00Z",
+            "end_time": "2026-06-02T08:00:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Workout with 90 min Timer",
+            "description": "Interval timer. Drop workout when time ends to stay efficient.",
+            "start_time": "2026-06-02T08:00:00Z",
+            "end_time": "2026-06-02T09:15:00Z",
+            "colorId": "8"
+        },
+        {
+            "summary": "Calm down",
+            "description": "Shower, recovery, mental calm.",
+            "start_time": "2026-06-02T09:15:00Z",
+            "end_time": "2026-06-02T09:45:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Practice / Work / Output",
+            "description": "Active work block. Try, practice, and create. USE POMODORO.",
+            "start_time": "2026-06-02T09:45:00Z",
+            "end_time": "2026-06-02T13:15:00Z",
+            "colorId": "3"
+        },
+        {
+            "summary": "Eat, Rest",
+            "description": "Lunch/brunch, relaxing, hydration.",
+            "start_time": "2026-06-02T13:15:00Z",
+            "end_time": "2026-06-02T14:00:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Learn, Study, Improve",
+            "description": "Deep educational block. Study planned materials.",
+            "start_time": "2026-06-02T14:00:00Z",
+            "end_time": "2026-06-02T17:15:00Z",
+            "colorId": "9"
+        },
+        {
+            "summary": "WHATEVER",
+            "description": "Unstructured time. Avoid vices.",
+            "start_time": "2026-06-02T17:15:00Z",
+            "end_time": "2026-06-02T18:15:00Z",
+            "colorId": "2"
+        },
+        {
+            "summary": "Dinner",
+            "description": "Dinner, cleaning up, relaxing.",
+            "start_time": "2026-06-02T18:15:00Z",
+            "end_time": "2026-06-02T19:00:00Z",
+            "colorId": "5"
+        },
+        {
+            "summary": "Journal, Trackers, Shopping",
+            "description": "Reflection, habit tracking, essentials for tomorrow.",
+            "start_time": "2026-06-02T19:00:00Z",
+            "end_time": "2026-06-02T19:45:00Z",
+            "colorId": "10"
+        },
+        {
+            "summary": "Wind down",
+            "description": "Second bath, meditate, prep bed.",
+            "start_time": "2026-06-02T19:45:00Z",
+            "end_time": "2026-06-02T20:30:00Z",
+            "colorId": "3"
+        }
+        
+    ]
+}
