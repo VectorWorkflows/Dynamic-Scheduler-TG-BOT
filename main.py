@@ -43,6 +43,7 @@ flow_store = {}
 
 # A simple diagnostic route. If you visit your website's /health page, it just says "I am alive."
 @app.get("/health")
+@app.head("/health")
 def health_check():
     return {"status": "healthy", "service": "Vector Workflows"}
 
