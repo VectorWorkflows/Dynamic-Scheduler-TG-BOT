@@ -390,10 +390,18 @@ def process_template_date(message):
 def start_bot():
     """This function keeps the bot running 24/7 on the server."""
     print("🚀 Vector Workflows UI started.")
+    
+    # Force-delete any lingering webhooks that might block polling
+    try:
+        bot.remove_webhook()
+        time.sleep(1)
+    except Exception:
+        pass
+
     while True:
         try: 
-            # polling(none_stop=True) means the bot is actively listening to Telegram's servers
             bot.polling(none_stop=True)
         except Exception as e: 
-            # If the network drops, wait 5 seconds and try again instead of crashing
+            # ACTUALLY PRINT THE ERROR TO THE LOGS
+            print(f"❌ [CRITICAL POLLING ERROR] {e}") 
             time.sleep(5)
