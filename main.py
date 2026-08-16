@@ -140,14 +140,6 @@ def launch_bot_thread():
     except Exception as e:
         print(f"[CRITICAL] Bot crashed: {e}")
 
-# --- ADD THIS NEW BLOCK RIGHT HERE ---
-@app.on_event("startup")
-def startup_event():
-    bot_thread = threading.Thread(target=launch_bot_thread, daemon=True)
-    bot_thread.start()
-    print("🚀 Telegram Bot thread launched via FastAPI startup event!")
-# -------------------------------------
-
 # This block is the true starting point of the entire application when you run 'python main.py'
 if __name__ == "__main__":
     # We must run TWO things at once: The Telegram Bot and the Web Server.
