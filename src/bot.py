@@ -23,6 +23,16 @@ def is_authenticated(chat_id: str) -> bool:
     return get_user_token(chat_id) is not None
 
 # ==========================================
+# DIAGNOSTIC PING (NO DATABASE)
+# ==========================================
+@bot.message_handler(commands=['ping'])
+def ping_test(message):
+    print("🏓 PING RECEIVED! (Bypassing Database)")
+    bot.reply_to(message, "🏓 PONG! The bot is receiving messages perfectly!")
+
+
+
+# ==========================================
 # MAIN MENU HANDLER (/start or /menu)
 # ==========================================
 @bot.message_handler(commands=['start', 'menu'])
