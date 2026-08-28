@@ -26,7 +26,7 @@ if "localhost" in config.BASE_URL or "127.0.0.1" in config.BASE_URL:
 # Initialize our web server. This acts as the "Drive-Thru Window" listening for Google's responses.
 app = FastAPI(title="Vector Workflows - OAuth Engine")
 # SCOPES define the permissions we are asking the user for (Full access to their Google Calendar).
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
 # ==========================================
 # SESSION MEMORY (THE VAULT)

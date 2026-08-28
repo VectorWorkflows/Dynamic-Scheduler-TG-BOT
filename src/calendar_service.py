@@ -13,7 +13,7 @@ import config
 from src.database import get_user_token, get_user_profile, update_user_profile, delete_user_token
 
 # SCOPES define exactly what we are allowed to do with the user's Google account.
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
 # Set up the timezone based on the config file (e.g., Asia/Kolkata)
 tz = pytz.timezone(config.USER_TIMEZONE)
