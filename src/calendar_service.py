@@ -37,7 +37,7 @@ def get_calendar_service(chat_id: str):
     
     try:
         service = build('calendar', 'v3', credentials=creds)
-        service.calendarList().list(maxResults=1).execute()
+        # REMOVED: service.calendarList().list(maxResults=1).execute() 
         return service
     except RefreshError:
         delete_user_token(chat_id)
